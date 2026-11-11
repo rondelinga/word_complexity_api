@@ -1,0 +1,10 @@
+#!/bin/bash -e
+
+rm -f /rails/tmp/pids/server.pid
+
+# Create or migrate the database before the web server starts.
+if [ "$1" == "./bin/rails" ] && [ "$2" == "server" ]; then
+  ./bin/rails db:prepare
+fi
+
+exec "${@}"

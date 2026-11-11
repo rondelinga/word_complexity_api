@@ -1,0 +1,142 @@
+openapi: 3.0.3
+info:
+  title: Word Complexity Score API
+  version: 1.0.0
+  description: |
+    Asynchronous API that scores the "complexity" of English words using
+    [dictionaryapi.dev](https://dictionaryapi.dev).
+
+    `score = (synonyms + antonyms) / definitions`, rounded to 2 decimals.
+
+    Submit words with `POST /complexity-score`, then poll
+    `GET /complexity-score/{job_id}` until `status` is `completed` or `failed`.
+servers:
+  - url: http://localhost:3000
+paths:
+  /complexity-score:
+    post:
+      summary: Submit words for scoring
+      operationId: createComplexityScore
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              minItems: 1
+              maxItems: 100
+              items:
+                type: string
+                maxLength: 64
+                pattern: "^\\p{L}+(?:['’\\- ]\\p{L}+)*$"
+              description: |
+                Words are trimmed, downcased and de-duplicated (order preserved).
+                Letters, inner spaces, hyphens and apostrophes are allowed.
+            example: ["happy", "joyful", "sad", "angry"]
+      responses:
+        "202":
+          description: Job accepted
+          headers:
+            Location:
+              description: URL to poll for the job status
+              schema: { type: string, format: uri }
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [job_id]
+                properties:
+                  job_id: { type: string, format: uuid }
+              example: { job_id: "9434445d-771f-4c12-944d-f1c02cf0ace2" }
+        "400":
+          description: Body is not valid JSON
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example:
+                error: { code: malformed_json, message: "Request body is not valid JSON: ..." }
+        "422":
+          description: Body is valid JSON but not a valid list of words
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example:
+                error:
+                  code: invalid_request
+                  message: Request validation failed
+                  details: ["Element at index 1 must be a string"]
+  /complexity-score/{job_id}:
+    get:
+      summary: Get job status and result
+      operationId: getComplexityScore
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Job status. `result` and `errors` appear once the job is finished.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Job" }
+              examples:
+                pending:
+                  value: { job_id: "9434445d-771f-4c12-944d-f1c02cf0ace2", status: pending, progress: { processed: 0, total: 4 } }
+                in_progress:
+                  value: { job_id: "9434445d-771f-4c12-944d-f1c02cf0ace2", status: in_progress, progress: { processed: 2, total: 4 } }
+                completed:
+                  value:
+                    job_id: "9434445d-771f-4c12-944d-f1c02cf0ace2"
+                    status: completed
+                    progress: { processed: 4, total: 4 }
+                    result: { happy: 3.0, joyful: 0.0, sad: 1.8, qwzxqv: null }
+                    errors: { qwzxqv: word_not_found }
+        "404":
+          description: Job not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example:
+                error: { code: job_not_found, message: "Job ... not found" }
+components:
+  schemas:
+    Job:
+      type: object
+      required: [job_id, status, progress]
+      properties:
+        job_id: { type: string, format: uuid }
+        status:
+          type: string
+          enum: [pending, in_progress, completed, failed]
+          description: |
+            `completed` - all words processed and at least one was scored.
+            `failed` - all words processed and none could be scored.
+        progress:
+          type: object
+          properties:
+            processed: { type: integer }
+            total: { type: integer }
+        result:
+          type: object
+          description: Word => score. `null` for words that could not be scored.
+          additionalProperties: { type: number, nullable: true }
+        errors:
+          type: object
+          description: Present only when some words failed. Word => error code.
+          additionalProperties:
+            type: string
+            enum: [word_not_found, no_definitions, dictionary_unavailable, invalid_dictionary_response, processing_error]
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details:
+              type: array
+              items: { type: string }

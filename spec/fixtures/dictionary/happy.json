@@ -1,0 +1,38 @@
+[
+  {
+    "word": "happy",
+    "phonetics": [{ "text": "/ˈhæpi/" }],
+    "meanings": [
+      {
+        "partOfSpeech": "adjective",
+        "definitions": [
+          { "definition": "Having a feeling of well-being.", "synonyms": ["content", "joyful"], "antonyms": ["sad"] },
+          { "definition": "Experiencing pleasure.", "synonyms": ["Joyful"], "antonyms": [] }
+        ],
+        "synonyms": ["cheerful"],
+        "antonyms": ["unhappy", "sad"]
+      },
+      {
+        "partOfSpeech": "noun",
+        "definitions": [
+          { "definition": "A happy event, thing, person, etc.", "synonyms": [], "antonyms": [] }
+        ],
+        "synonyms": [],
+        "antonyms": []
+      }
+    ]
+  },
+  {
+    "word": "happy",
+    "meanings": [
+      {
+        "partOfSpeech": "verb",
+        "definitions": [
+          { "definition": "To become happy.", "synonyms": ["happify"], "antonyms": [] }
+        ],
+        "synonyms": [],
+        "antonyms": []
+      }
+    ]
+  }
+]
